@@ -1,0 +1,12 @@
+# .gitpod.yml
+image: gitpod/workspace-python  # Imagen con Python preinstalado
+
+tasks:
+  - name: Instalar dependencias
+    command: |
+      pip install -r requirements.txt
+      echo "✅ Dependencias instaladas"
+
+vscode:
+  extensions:
+    - ms-python.python  # Extensión de Python para VSCode en Gitpod
