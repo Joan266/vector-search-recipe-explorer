@@ -1,12 +1,14 @@
-# .gitpod.yml
-image: gitpod/workspace-python  # Imagen con Python preinstalado
+image: gitpod/workspace-python  # Base image with Python pre-installed
 
 tasks:
-  - name: Instalar dependencias
-    command: |
+  - name: Set up .venv and install dependencies
+    init: |
+      python -m venv .venv
+      source .venv/bin/activate
+      pip install --upgrade pip
       pip install -r requirements.txt
-      echo "✅ Dependencias instaladas"
+    command: echo "✅ .venv environment ready and dependencies installed"
 
 vscode:
   extensions:
-    - ms-python.python  # Extensión de Python para VSCode en Gitpod
+    - ms-python.python
