@@ -1,4 +1,4 @@
-image: gitpod/workspace-python
+image: mcr.microsoft.com/devcontainers/python:0-3.11
 
 tasks:
   - name: Create .venv and install dependencies
