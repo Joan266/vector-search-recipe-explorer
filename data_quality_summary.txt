@@ -1,6 +1,0 @@
---- Data Quality Summary ---
-Total records: 10001
-Missing NutriScore grade: 1145
-Missing EcoScore grade: 2245
-Unknown Nova Group: 1192
-Empty search_text entries: 0

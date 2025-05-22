@@ -1,13 +1,13 @@
-image: gitpod/workspace-python  # Base image with Python pre-installed
+image: gitpod/workspace-python
 
 tasks:
-  - name: Set up .venv and install dependencies
+  - name: Create .venv and install dependencies
     init: |
-      python -m venv .venv
-      source .venv/bin/activate
-      pip install --upgrade pip
+      python3 -m venv .venv
+      . .venv/bin/activate
+      pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
-    command: echo "✅ .venv environment ready and dependencies installed"
+    command: echo "✅ Entorno virtual y dependencias listos"
 
 vscode:
   extensions:
