@@ -1,38 +1,67 @@
 import pandas as pd
 import ast
+import re
 from unidecode import unidecode
 import json
 
-# Load the CSV file
+# --- Load raw dataset ---
 df = pd.read_csv("openfoodfacts_spain_products.csv")
 
-# Clean 'brands' column
+# --- Cleaning Helpers ---
+
+def normalize_text(text):
+    if pd.isnull(text):
+        return ""
+    return unidecode(str(text)).strip().lower()
+
 def clean_brands(brand_str):
     if pd.isnull(brand_str):
         return []
     brand_str = unidecode(brand_str.strip().lower())
-    return [b.strip() for b in brand_str.split(',')]
+    return [b.strip() for b in brand_str.split(',') if b.strip() and not b.strip().isdigit()]
 
-df['brands'] = df['brands'].apply(clean_brands)
-
-# Clean 'categories_tags' column
 def clean_categories(cat_str):
     try:
         cat_list = ast.literal_eval(cat_str)
-        return [c.split(':')[-1].replace('-', ' ').strip().lower() for c in cat_list]
+        return [normalize_text(c.split(':')[-1].replace('-', ' ')) for c in cat_list]
     except (ValueError, SyntaxError, TypeError):
         return []
 
-df['categories_tags'] = df['categories_tags'].apply(clean_categories)
+def clean_product_name(name):
+    if pd.isnull(name):
+        return ""
+    name = unidecode(str(name)).strip()
+    name = re.sub(r'^["\']+|["\']+$', '', name)
+    name = name.lower()
+    return name
 
-# Handle missing values
+# --- Cleaning Steps ---
+
+df["product_name"] = df["product_name"].apply(clean_product_name)
+df["brands"] = df["brands"].apply(clean_brands)
+df["brand"] = df["brands"].apply(lambda b: b[0] if b else "")
+df["brand"] = df["brand"].apply(normalize_text)
+df["categories_tags"] = df["categories_tags"].apply(clean_categories)
+
+# --- Filter: remove low-quality or irrelevant entries ---
+
+df = df[df["product_name"].str.len() >= 3]
+df = df[~df["product_name"].str.match(r"^\d{6,}$")]  # product name is all digits
+df = df[~df["product_name"].str.contains(r'[\u0600-\u06FF\u0590-\u05FF]', na=False)]  # Arabic/Hebrew
+df = df[~df["brand"].str.match(r"^\d+$")]  # brand name is all digits
+df = df[df["brand"].str.strip() != ""]
+df = df[df["product_name"].str.strip() != ""]
+df = df[df["categories_tags"].map(len) > 0]
+
+# --- Normalize score fields ---
+
 df["ecoscore_grade"] = (
     df["ecoscore_grade"]
     .replace({"not-applicable": "unknown"})
     .fillna("unknown")
 )
 
-df["nova_group"] = df["nova_group"].fillna(-1)
+df["nova_group"] = df["nova_group"].fillna(-1).replace(-1, None)
 
 nutriscore_map = {
     -15: "a", -5: "a",
@@ -41,54 +70,51 @@ nutriscore_map = {
     15: "d", 20: "d",
     25: "e", 40: "e"
 }
-
 df["nutriscore_grade"] = (
     df["nutriscore_grade"]
     .fillna(df["nutriscore_score"].map(nutriscore_map))
     .fillna("unknown")
 )
 
-# Create search_text
-df["search_text"] = (
-    df["product_name"].fillna("") + " " +
-    df["brands"].apply(lambda x: " ".join(x)) + " " +
-    df["categories_tags"].apply(lambda x: " ".join(x)) + " " +
-    "nutriscore_" + df["nutriscore_grade"] + " " +
-    "ecoscore_" + df["ecoscore_grade"] + " " +
-    "nova_" + df["nova_group"].astype(str)
-).str.strip()
+# --- Quality scoring for deduplication ---
 
-# Flag and drop unusable records
-df["is_usable"] = (
-    df["search_text"].str.strip() != ""
-) & (df["nutriscore_grade"] != "unknown")
+def record_quality(row):
+    score = 0
+    score += len(row["categories_tags"]) if isinstance(row["categories_tags"], list) else 0
+    score += 1 if pd.notnull(row["image_url"]) and str(row["image_url"]).strip() != "" else 0
+    score += 1 if row["nutriscore_grade"] != "unknown" else 0
+    score += 1 if row["ecoscore_grade"] != "unknown" else 0
+    score += 1 if pd.notnull(row["nova_group"]) else 0
+    return score
 
-df = df[df["is_usable"]].reset_index(drop=True)
+df["quality_score"] = df.apply(record_quality, axis=1)
+df = df.sort_values(by=["product_name", "brand", "quality_score"], ascending=[True, True, False])
+df = df.drop_duplicates(subset=["product_name", "brand"], keep="first")
+df = df.drop(columns=["quality_score"])
 
-# Remove unnecessary column
-if 'schema_version' in df.columns:
-    df = df.drop(columns=['schema_version'])
+# --- Final adjustments for MongoDB compatibility ---
 
-# Save cleaned data
+df["_id"] = df["code"].fillna(0).astype(int).astype(str)
+df["vector"] = None
+df["created_at"] = pd.Timestamp.now().isoformat()
+df["origin"] = "openfoodfacts"
+df["schema_version"] = 1
+df["embedding_version"] = "openai-ada-v2"
+df["scoring_version"] = "nutri-2024.1"
+
+# --- Final column order ---
+
+columns = [
+    "_id", "product_name", "brand", "brands", "categories_tags", "image_url",
+    "nutriscore_grade", "nutriscore_score", "ecoscore_grade", "nova_group",
+    "vector", "created_at", "origin", "schema_version", "embedding_version", "scoring_version"
+]
+df = df[columns]
+
+# --- Export ---
+
 df.to_csv("cleaned_food_products.csv", index=False)
-df.to_json("cleaned_food_products.json", orient="records", force_ascii=False)
+df.to_json("cleaned_food_products.json", orient="records", force_ascii=False, indent=2)
 
-print("✅ Cleaning complete! Saved to 'cleaned_food_products.csv' and 'cleaned_food_products.json'")
-
-# Summary
-total = len(df)
-missing_nutri = (df["nutriscore_grade"] == "unknown").sum()
-missing_eco = (df["ecoscore_grade"] == "unknown").sum()
-unknown_nova = (df["nova_group"] == -1).sum()
-empty_search = (df["search_text"].str.strip() == "").sum()
-
-print("\n--- Data Quality Summary ---")
-print(f"Total usable records: {total}")
-print(f"Missing NutriScore grade: {missing_nutri}")
-print(f"Missing EcoScore grade: {missing_eco}")
-print(f"Unknown Nova Group: {unknown_nova}")
-print(f"Empty search_text entries: {empty_search}")
-
-# Show one sample
-print("\nSample cleaned record:")
-print(json.dumps(df.iloc[0].to_dict(), indent=2, ensure_ascii=False))
+print("✅ Cleaning complete! Files saved as 'cleaned_food_products.csv' and 'cleaned_food_products.json'")
+print(f"🧮 Final record count: {len(df)}")
