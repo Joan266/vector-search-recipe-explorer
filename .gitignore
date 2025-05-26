@@ -22,6 +22,7 @@ __pycache__/
 *.bak
 *.swp
 *.csv
+*.json
 *.tsv
 
 # IDE/editor settings
