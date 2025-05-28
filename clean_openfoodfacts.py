@@ -66,7 +66,6 @@ def extract_ecoscore_data(ecoscore_str):
     first_origin = agg_origins[0] if agg_origins else {}
 
     return pd.Series({
-        'ecoscore_grade': data.get('grade'),
         'origins_epi_score': origins.get('epi_score'),
         'origins_epi_value': origins.get('epi_value'),
         'origins_transportation_score': origins.get('transportation_score'),
@@ -75,7 +74,6 @@ def extract_ecoscore_data(ecoscore_str):
         'packaging_score': packaging.get('score'),
         'packaging_value': packaging.get('value'),
         'packaging_non_recyclable_materials': packaging.get('non_recyclable_and_non_biodegradable_materials'),
-        'production_value': production.get('value'),
     })
 
 def clean_openfoodfacts_data(input_csv, output_csv):

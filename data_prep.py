@@ -6,17 +6,16 @@ important_columns = [
     "nutrient_levels_tags", "nutriments",
     "nutrition_grade_fr", 
     "ecoscore_data", "ecoscore_grade", "ecoscore_tags",
-    "ingredients_without_ecobalyse_ids_n",
-    "ingredients_analysis", "ingredients_analysis_tags", "ingredients_percent_analysis", "ingredients_tags",
-    "product_name", "brands_tags", "categories_tags", "code",
-    "last_updated_t","image_url"
+    "ingredients_analysis", "ingredients_analysis_tags", "ingredients_tags",
+    "product_name", "brands_tags", "categories_tags", "code"
+    ,"image_url"
 ]
 
 fields_param = ",".join(important_columns)
 results = []
 
 # 📦 Fetch data from Open Food Facts API
-for page in range(1, 10):  # You can increase the page range for more data
+for page in range(1, 151): 
     url = (
         f"https://world.openfoodfacts.net/api/v2/search?"
         f"country=spain"
