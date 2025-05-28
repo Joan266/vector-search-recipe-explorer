@@ -5,7 +5,7 @@ import pandas as pd
 important_columns = [
     "_keywords", "additives_n", "brands_tags", "categories_tags", "code",
     "ecoscore_data", "ecoscore_grade", "ecoscore_tags", "ingredients_analysis",
-    "ingredients_analysis_tags", "ingredients_n",
+    "ingredients_analysis_tags", "ingredients_n","image_url",
     "ingredients_n_tags", "ingredients_non_nutritive_sweeteners_n",
     "ingredients_percent_analysis", "ingredients_sweeteners_n", "ingredients_tags",
     "ingredients_text", "ingredients_text_with_allergens", "ingredients_with_specified_percent_n",
@@ -43,12 +43,9 @@ print(f"✅ Saved {len(df)} products from Spain")
 
 # 🎯 Define thematic groups of columns
 nutrition_columns = [
-    "nutrient_levels", "nutrient_levels_tags", "nutriments",
-    "nutrition_data_per", "nutrition_data_prepared_per",
-    "nutrition_grade_fr", "nutrition_grades", "nutrition_grades_tags",
-    "nutrition_score_beverage", "nova_groups_tags", "known_ingredients_n",
-    "ingredients_n", "ingredients_text", "ingredients_text_with_allergens",
-    "ingredients_sweeteners_n", "ingredients_non_nutritive_sweeteners_n"
+     "nutrient_levels_tags", "nutriments",
+    "nutrition_grade_fr", 
+     "nova_groups_tags", "ingredients_text",
 ]
 
 eco_columns = [
@@ -57,16 +54,12 @@ eco_columns = [
 ]
 
 ingredients_columns = [
-    "ingredients_analysis", "ingredients_analysis_tags",
-    "ingredients_n_tags", "ingredients_percent_analysis", "ingredients_tags",
-    "ingredients_with_specified_percent_n", "ingredients_with_specified_percent_sum",
-    "ingredients_with_unspecified_percent_n", "ingredients_with_unspecified_percent_sum",
-    "ingredients_without_ciqual_codes_n"
+    "ingredients_analysis", "ingredients_analysis_tags", "ingredients_percent_analysis", "ingredients_tags"
 ]
 
 meta_columns = [
     "product_name", "brands_tags", "categories_tags", "code",
-    "product_type", "last_updated_t", "_keywords"
+    "product_type", "last_updated_t", "_keywords","image_url"
 ]
 
 # 🗂️ Create themed DataFrames
