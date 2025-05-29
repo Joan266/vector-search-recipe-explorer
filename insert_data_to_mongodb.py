@@ -2,13 +2,16 @@ import ast
 import json
 import pandas as pd
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
 
-# ---------- CONFIG ----------
-CSV_PATH = "cleaned_output_no_empty_rows.csv"
-MONGODB_URI = "mongodb+srv://<username>:<password>@<cluster-url>/?retryWrites=true&w=majority"
-DB_NAME = "your_database"
-COLLECTION_NAME = "products"
-# ----------------------------
+# ---------- LOAD ENV ----------
+load_dotenv()
+
+MONGODB_URI = os.getenv("MONGODB_URI")
+DB_NAME = os.getenv("DB_NAME")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+# ------------------------------
 
 # Fields to parse specially
 list_fields = [
@@ -50,7 +53,7 @@ def parse_field(val, field):
         return None if field in float_fields else val
 
 # Load CSV
-df = pd.read_csv(CSV_PATH)
+df = pd.read_csv("cleaned_output_no_empty_rows.csv")
 
 # Parse all rows
 json_docs = []

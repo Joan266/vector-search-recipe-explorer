@@ -15,7 +15,7 @@ fields_param = ",".join(important_columns)
 results = []
 
 # 📦 Fetch data from Open Food Facts API
-for page in range(1, 151): 
+for page in range(1, 51): 
     url = (
         f"https://world.openfoodfacts.net/api/v2/search?"
         f"country=spain"
