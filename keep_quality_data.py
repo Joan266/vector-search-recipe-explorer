@@ -24,6 +24,9 @@ empty_mask = df.applymap(is_empty)
 # Drop rows with any empty values
 df_cleaned = df[~empty_mask.any(axis=1)].copy()
 
+# Save cleaned DataFrame to new CSV
+df_cleaned.to_csv("cleaned_output_no_empty_rows.csv", index=False)
+
 # Calculate percentage of empties per column in the cleaned DataFrame (should be zero now)
 empty_percentages = df_cleaned.applymap(is_empty).sum() / len(df_cleaned) * 100
 
