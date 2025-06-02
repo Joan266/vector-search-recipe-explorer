@@ -1,24 +1,12 @@
 import ast
 import json
 import pandas as pd
-from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
-import vertexai
-from vertexai.language_models import TextEmbeddingModel, TextEmbeddingInput
 
 # ---------- LOAD ENV ----------
 load_dotenv()
-MONGODB_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("DB_NAME")
-COLLECTION_NAME = os.getenv("COLLECTION_NAME")
-GCP_PROJECT = os.getenv("GCP_PROJECT")
-GCP_REGION = os.getenv("GCP_REGION", "us-central1")
-GCP_KEY_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_KEY_PATH
-
-# ---------- Define parsing helpers ----------
 list_fields = [
     "brands_tags", "categories_tags", "ingredients_analysis",
     "ingredients_tags", "nutrient_levels_tags"
@@ -71,16 +59,31 @@ def generate_vector(doc):
             else:
                 parts.append(str(val))
 
+    # Add product name twice for emphasis
     add("product_name", "product name")
+    add("product_name", "product name")
+
+    # Brand with prefix
     add("brands_tags", "brand")
+
+    # Categories with prefix
     add("categories_tags", "categories")
+
+    # Ingredients
     add("ingredients_tags", "ingredients")
     add("ingredients_analysis", "ingredient analysis")
+
+    # Nutrient levels
     add("nutrient_levels_tags", "nutrient levels")
+
+    # Grades
     add("nutrition_grade_fr", "nutrition grade")
     add("ecoscore_grade", "ecoscore grade")
+
+    # Nutriments dict nicely formatted
     add("nutriments", "nutriments")
 
+    # Origins fields with labels
     origins_fields = [
         "origins_epi_score", "origins_epi_value", "origins_transportation_score",
         "origins_value", "origins_main_percent"
@@ -92,6 +95,7 @@ def generate_vector(doc):
     if origins_text:
         parts.append(f"origins: {origins_text}")
 
+    # Packaging fields with labels
     packaging_fields = [
         "packaging_score", "packaging_value", "packaging_non_recyclable_materials"
     ]
@@ -105,57 +109,23 @@ def generate_vector(doc):
     full_text = " | ".join(parts).lower().strip()
     return full_text if full_text else None
 
-# ---------- Initialize Vertex AI ----------
-print("🔌 Initializing Vertex AI...")
-vertexai.init(project=GCP_PROJECT, location=GCP_REGION)
-
-print("📦 Loading embedding model...")
-embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
-print("✅ Model loaded!")
-
-# ---------- Load CSV ----------
+# Load CSV
 df = pd.read_csv("cleaned_output_no_empty_rows.csv")
 
-# ---------- Parse and generate vector_text ----------
-json_docs = []
+# Parse CSV rows
+parsed_docs = []
 for _, row in df.iterrows():
     parsed_doc = {}
     for col in df.columns:
         parsed_doc[col] = parse_field(row[col], col)
-    vector_text = generate_vector(parsed_doc)
-    parsed_doc["vector_text"] = vector_text
-    json_docs.append(parsed_doc)
 
-print(f"📝 Parsed {len(json_docs)} documents with vector text.")
+    # Add the vector text field
+    parsed_doc["vector_text"] = generate_vector(parsed_doc)
 
-print("🧮 Generating embeddings for each document vector_text...")
+    parsed_docs.append(parsed_doc)
 
-for doc in json_docs:
-    input_obj = TextEmbeddingInput(doc["vector_text"], "RETRIEVAL_DOCUMENT")
-    embedding = embedding_model.get_embeddings([input_obj], output_dimensionality=768)
-    doc["embedding"] = embedding[0].values
+# Save parsed data as JSON
+with open("parsed_docs.json", "w", encoding="utf-8") as f:
+    json.dump(parsed_docs, f, ensure_ascii=False, indent=2)
 
-print("✅ Embeddings generated for all documents.")
-
-# ---------- Connect to MongoDB ----------
-print("🔗 Connecting to MongoDB...")
-client = MongoClient(MONGODB_URI)
-db = client[DB_NAME]
-collection = db[COLLECTION_NAME]
-
-# ---------- Insert into MongoDB ----------
-print(f"🗑️ Dropping existing '{COLLECTION_NAME}' collection...")
-collection.drop()
-
-print(f"🚀 Inserting {len(json_docs)} documents into '{COLLECTION_NAME}'...")
-collection.insert_many(json_docs)
-
-# ---------- Create indexes ----------
-print("🗂️ Creating indexes...")
-collection.create_index("categories_tags")
-collection.create_index("nutrition_grade_fr")
-collection.create_index("product_name")
-collection.create_index("code", unique=True)
-print("✅ Indexes created.")
-
-print("🎉 All done!")
+print(f"✅ Parsed {len(parsed_docs)} documents and saved to parsed_docs.json")
