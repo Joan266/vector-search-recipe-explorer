@@ -26,8 +26,7 @@ def get_query_embedding(text: str) -> list[float]:
 
 def search_products(query_text: str, k: int = 5):
     query_embedding = get_query_embedding(query_text)
-    print("Query embedding sample:", query_embedding[:5])  # muestra primeras 5 dimensiones
-
+    print("Query embedding sample:", query_embedding[:5])  
     client = MongoClient(MONGODB_URI)
     collection = client[DB_NAME][COLLECTION_NAME]
 

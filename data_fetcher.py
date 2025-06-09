@@ -7,15 +7,15 @@ important_columns = [
     "nutrition_grade_fr", 
     "ecoscore_data", "ecoscore_grade", "ecoscore_tags",
     "ingredients_analysis", "ingredients_analysis_tags", "ingredients_tags",
-    "product_name", "brands_tags", "categories_tags", "code"
-    ,"image_url"
+    "product_name", "brands_tags", "categories_tags", "code",
+    "image_url"
 ]
 
 fields_param = ",".join(important_columns)
 results = []
 
-# 📦 Fetch data from Open Food Facts API
-for page in range(1, 51): 
+# 📦 Fetch data from Open Food Facts API with improved filters
+for page in range(1, 551): 
     url = (
         f"https://world.openfoodfacts.net/api/v2/search?"
         f"country=spain"
@@ -27,7 +27,17 @@ for page in range(1, 51):
         f"&tagtype_0=product_type"
         f"&tag_contains_0=contains"
         f"&tag_0=food"
+        f"&tagtype_1=nutrition_grades"
+        f"&tag_contains_1=exclude"
+        f"&tag_1=unknown"
+        f"&tagtype_2=status"
+        f"&tag_contains_2=contains"
+        f"&tag_2=validated"
+        f"&tagtype_3=images"
+        f"&tag_contains_3=contains"
+        f"&tag_3=front"
     )
+    print(f"Fetching page {page}...")  # Optional progress info
     r = requests.get(url)
     data = r.json()
     products = data.get("products", [])
@@ -35,7 +45,7 @@ for page in range(1, 51):
 
 # 🧹 Load into a DataFrame
 df = pd.DataFrame(results)
-print(f"✅ Saved {len(df)} products from Spain")
+print(f"✅ Saved {len(df)} products from Spain with improved quality filters")
 
 # 💾 Save DataFrame to CSV
 df.to_csv("spain_food_products.csv", index=False)
