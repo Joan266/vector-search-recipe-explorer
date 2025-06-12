@@ -15,12 +15,12 @@ fields_param = ",".join(important_columns)
 results = []
 
 # 📦 Fetch data from Open Food Facts API with improved filters
-for page in range(1, 551): 
+for page in range(1, 2): 
     url = (
         f"https://world.openfoodfacts.net/api/v2/search?"
         f"country=spain"
         f"&page={page}"
-        f"&page_size=100"
+        f"&page_size=50"
         f"&sort_by=unique_scans_n"
         f"&lc=en"
         f"&fields={fields_param}"
@@ -37,7 +37,7 @@ for page in range(1, 551):
         f"&tag_contains_3=contains"
         f"&tag_3=front"
     )
-    print(f"Fetching page {page}...")  # Optional progress info
+    print(f"Fetching page {page}...")  
     r = requests.get(url)
     data = r.json()
     products = data.get("products", [])

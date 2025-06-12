@@ -1,6 +1,7 @@
 import pandas as pd
 import ast
 import re
+import requests
 from urllib.parse import urlparse
 import json
 
@@ -11,13 +12,14 @@ def clean_list_string(val):
         items = ast.literal_eval(val)
         cleaned_items = []
         for item in items:
-            if isinstance(item, str) and item.startswith(('en:', 'xx:')):
+            if isinstance(item, str):
                 item_clean = re.sub(r'^(en:|xx:)', '', item)
-                if re.fullmatch(r'[ -~]+', item_clean): 
+                if re.fullmatch(r'[ -~]+', item_clean):  # Keep ASCII-clean items
                     cleaned_items.append(item_clean)
         return cleaned_items
     except Exception:
         return []
+
 
 def clean_code(val):
     if pd.notna(val):
@@ -32,7 +34,14 @@ def clean_url(val):
     if isinstance(val, str):
         parsed = urlparse(val)
         if all([parsed.scheme, parsed.netloc]):
-            return val
+            try:
+                response = requests.head(val, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+                if response.status_code == 200:
+                    return val
+                else:
+                    print(f"🚫 Dead URL ({response.status_code}): {val}")
+            except Exception as e:
+                print(f"⚠️ Error checking URL {val}: {e}")
     return None
 
 def clean_nutriments(val):
