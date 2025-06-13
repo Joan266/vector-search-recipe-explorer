@@ -1,10 +1,15 @@
 image: gitpod/workspace-full
+
 tasks:
   - init: |
+      cd backend  # First navigate to backend folder
       python -m venv .venv
       source .venv/bin/activate
       pip install -r requirements.txt
-    command: python app.py
+    command: |
+      cd backend  # Run from backend folder
+      python app.py
+
 ports:
   - port: 5000
-    onOpen: open-browser
+    onOpen: open-preview
