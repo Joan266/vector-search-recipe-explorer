@@ -3,24 +3,388 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Recipe Finder</title>
-    <link rel="stylesheet" href="static/styles.css">
+    <title>Green Recipe Finder</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Color Variables */
+        :root {
+            --primary: #6cbd49;      /* Vibrant Green */
+            --primary-light: #8fd46a; /* Lighter Green */
+            --primary-dark: #4fa732;  /* Darker Green */
+            --light: #fefefe;        /* Off-White */
+            --light-gray: #f5f5f5;    /* Very Light Gray */
+            --text: #242627;          /* Dark Gray Text */
+            --text-light: #fefefe;    /* Light Text */
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-gray);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Styles */
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: var(--light);
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: linear-gradient(90deg, var(--primary-light), var(--primary-dark));
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            color: var(--primary-dark);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            color: var(--text);
+            max-width: 600px;
+            margin: 0 auto;
+            opacity: 0.8;
+        }
+
+        /* Search Component */
+        .search-container {
+            display: flex;
+            margin-bottom: 30px;
+            background: var(--light);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        #ingredient-input {
+            flex: 1;
+            padding: 18px 24px;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 1.1rem;
+            outline: none;
+        }
+
+        #ingredient-input::placeholder {
+            color: var(--text);
+            opacity: 0.5;
+        }
+
+        #search-btn {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+            color: var(--light);
+            border: none;
+            padding: 0 35px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        #search-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* Health Meter Component */
+        #health-meter {
+            background: var(--light);
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        #health-meter h3 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #health-meter h3 i {
+            color: var(--primary);
+        }
+
+        .meter {
+            height: 35px;
+            background-color: var(--light-gray);
+            border-radius: 20px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .health-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 20px;
+            transition: width 1s ease-in-out;
+            background: linear-gradient(90deg, #fbbc05, #f9a825, var(--primary));
+        }
+
+        #health-score {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        #health-feedback {
+            font-size: 1.1rem;
+            text-align: center;
+            color: var(--text);
+            opacity: 0.8;
+        }
+
+        /* Recipe Grid Component */
+        .recipe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .recipe-card {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            height: 500px;
+        }
+
+        .recipe-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .recipe-content {
+            position: relative;
+            z-index: 2;
+            background: rgba(254, 254, 254, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-top: 4px solid var(--primary);
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .recipe-title {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .recipe-meta {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            color: var(--text);
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        .recipe-meta span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ingredients-list {
+            margin: 15px 0;
+            padding-left: 20px;
+            color: var(--text);
+            flex: 1;
+        }
+
+        .ingredients-list li {
+            margin-bottom: 8px;
+        }
+
+        .audio-btn {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+            color: var(--light);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .audio-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        /* Audio Player Component */
+        #audio-player {
+            width: 100%;
+            margin: 30px 0;
+            border-radius: 12px;
+            background: var(--light);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        /* Loading Component */
+        #loading {
+            text-align: center;
+            margin: 60px 0;
+            padding: 40px;
+            background: var(--light);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .spinner {
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        #loading p {
+            font-size: 1.3rem;
+            color: var(--text);
+        }
+
+        /* Health colors */
+        .healthy { color: var(--primary); }
+        .moderate { color: #fbbc05; }
+        .unhealthy { color: #ea4335; }
+
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .recipe-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-container {
+                flex-direction: column;
+            }
+            
+            #ingredient-input {
+                width: 100%;
+                margin-bottom: 0;
+            }
+            
+            #search-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 15px;
+            }
+
+            header h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--text);
+            opacity: 0.7;
+            font-size: 0.9rem;
+            margin-top: 40px;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>AI Recipe Finder</h1>
-            <p>Discover recipes based on what you have</p>
+            <h1>Green Recipe Finder</h1>
+            <p>Discover healthy recipes based on ingredients you have</p>
         </header>
 
         <div class="search-container">
             <input type="text" id="ingredient-input" placeholder="Enter ingredients (e.g., eggs, flour, chicken)">
-            <button id="search-btn"><i class="fas fa-search"></i> Search</button>
+            <button id="search-btn"><i class="fas fa-search"></i> Find Recipes</button>
         </div>
 
-        <div id="health-meter" class="hidden">
-            <h3>Nutrition Score</h3>
+        <div id="health-meter" class="hidden fade-in">
+            <h3><i class="fas fa-heartbeat"></i> Nutrition Score</h3>
             <div class="meter">
                 <div class="health-bar" id="health-bar"></div>
                 <span id="health-score">0%</span>
@@ -34,10 +398,198 @@
 
         <div id="loading" class="hidden">
             <div class="spinner"></div>
-            <p>Finding delicious recipes...</p>
+            <p>Analyzing ingredients and finding the best recipes...</p>
         </div>
+
+        <footer>
+            <p>Green Recipe Finder - Healthy Eating Made Simple</p>
+        </footer>
     </div>
 
-    <script src="static/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ingredientInput = document.getElementById('ingredient-input');
+            const searchBtn = document.getElementById('search-btn');
+            const resultsContainer = document.getElementById('results');
+            const healthMeter = document.getElementById('health-meter');
+            const healthBar = document.getElementById('health-bar');
+            const healthScore = document.getElementById('health-score');
+            const healthFeedback = document.getElementById('health-feedback');
+            const audioPlayer = document.getElementById('audio-player');
+            const loadingIndicator = document.getElementById('loading');
+            
+            // Sample data - replace with actual API calls
+            const mockRecipes = [
+                {
+                    id: 1,
+                    name: "Green Power Smoothie",
+                    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
+                    ingredients: ["spinach", "banana", "almond milk", "chia seeds", "peanut butter"],
+                    prepTime: "5 mins",
+                    cookTime: "0 mins",
+                    instructions: "1. Combine all ingredients in blender. 2. Blend until smooth. 3. Pour into glass and enjoy immediately.",
+                    nutritionScore: 95,
+                    healthClass: "healthy"
+                },
+                {
+                    id: 2,
+                    name: "Avocado Toast",
+                    image: "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
+                    ingredients: ["whole grain bread", "avocado", "cherry tomatoes", "feta cheese", "olive oil"],
+                    prepTime: "10 mins",
+                    cookTime: "5 mins",
+                    instructions: "1. Toast bread. 2. Mash avocado with salt and pepper. 3. Spread on toast. 4. Top with tomatoes and feta. 5. Drizzle with olive oil.",
+                    nutritionScore: 88,
+                    healthClass: "healthy"
+                },
+                {
+                    id: 3,
+                    name: "Quinoa Salad",
+                    image: "https://images.unsplash.com/photo-1546069901-6586ba033cce?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
+                    ingredients: ["quinoa", "cucumber", "cherry tomatoes", "red onion", "feta cheese", "lemon juice"],
+                    prepTime: "15 mins",
+                    cookTime: "15 mins",
+                    instructions: "1. Cook quinoa according to package. 2. Chop vegetables. 3. Combine all ingredients in bowl. 4. Dress with lemon juice and olive oil. 5. Chill before serving.",
+                    nutritionScore: 90,
+                    healthClass: "healthy"
+                }
+            ];
+
+            // Search function
+            searchBtn.addEventListener('click', async function() {
+                const ingredients = ingredientInput.value.trim();
+                if (!ingredients) return;
+                
+                // Show loading indicator
+                loadingIndicator.classList.remove('hidden');
+                resultsContainer.innerHTML = '';
+                healthMeter.classList.add('hidden');
+                audioPlayer.classList.add('hidden');
+                
+                try {
+                    // Simulate API call delay
+                    await new Promise(resolve => setTimeout(resolve, 1800));
+                    
+                    // In a real app, you would call your backend API here:
+                    // const response = await fetch(`/api/recipes/search?ingredients=${encodeURIComponent(ingredients)}`);
+                    // const recipes = await response.json();
+                    
+                    // Display results
+                    displayRecipes(mockRecipes);
+                    
+                    // Update health meter with first recipe's score
+                    updateHealthMeter(mockRecipes[0].nutritionScore);
+                } catch (error) {
+                    console.error('Error fetching recipes:', error);
+                    resultsContainer.innerHTML = '<p class="error">Failed to load recipes. Please try again.</p>';
+                } finally {
+                    loadingIndicator.classList.add('hidden');
+                }
+            });
+
+            // Display recipes
+            function displayRecipes(recipes) {
+                resultsContainer.innerHTML = '';
+                
+                recipes.forEach((recipe, index) => {
+                    const recipeCard = document.createElement('div');
+                    recipeCard.className = 'recipe-card fade-in';
+                    recipeCard.style.animationDelay = `${index * 0.2}s`;
+                    
+                    recipeCard.innerHTML = `
+                        <img src="${recipe.image}" alt="${recipe.name}" class="recipe-bg">
+                        <div class="recipe-content">
+                            <h3 class="recipe-title">${recipe.name}</h3>
+                            <div class="recipe-meta">
+                                <span><i class="fas fa-clock"></i> ${recipe.prepTime} prep</span>
+                                <span><i class="fas fa-fire"></i> ${recipe.cookTime} cook</span>
+                                <span class="${recipe.healthClass}"><i class="fas fa-apple-alt"></i> ${recipe.nutritionScore}%</span>
+                            </div>
+                            <h4><i class="fas fa-carrot"></i> Ingredients:</h4>
+                            <ul class="ingredients-list">
+                                ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+                            </ul>
+                            <button class="audio-btn" data-id="${recipe.id}">
+                                <i class="fas fa-play-circle"></i> Listen to Instructions
+                            </button>
+                        </div>
+                    `;
+                    
+                    resultsContainer.appendChild(recipeCard);
+                });
+
+                // Add event listeners to audio buttons
+                document.querySelectorAll('.audio-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const recipeId = this.getAttribute('data-id');
+                        playInstructions(recipeId);
+                    });
+                });
+            }
+
+            // Update health meter
+            function updateHealthMeter(score) {
+                healthMeter.classList.remove('hidden');
+                healthBar.style.width = `${score}%`;
+                healthScore.textContent = `${score}%`;
+                
+                // Set feedback based on score
+                if (score > 85) {
+                    healthFeedback.innerHTML = `<span class="healthy">Excellent choice! This recipe is packed with nutrients and low in processed ingredients.</span>`;
+                } else if (score > 70) {
+                    healthFeedback.innerHTML = `<span class="moderate">Good option! This recipe offers balanced nutrition and wholesome ingredients.</span>`;
+                } else if (score > 50) {
+                    healthFeedback.innerHTML = `<span class="moderate">Moderate nutrition. Contains some less healthy ingredients - enjoy in moderation.</span>`;
+                } else {
+                    healthFeedback.innerHTML = `<span class="unhealthy">Less healthy. High in processed ingredients - consider as an occasional treat.</span>`;
+                }
+            }
+
+            // Play instructions audio
+            async function playInstructions(recipeId) {
+                try {
+                    // Get recipe data
+                    const recipe = mockRecipes.find(r => r.id == recipeId);
+                    if (!recipe) return;
+                    
+                    // Hide any previous audio player
+                    audioPlayer.classList.add('hidden');
+                    
+                    // For demo, we'll use text-to-speech in the browser
+                    if ('speechSynthesis' in window) {
+                        // Stop any current speech
+                        window.speechSynthesis.cancel();
+                        
+                        const utterance = new SpeechSynthesisUtterance(recipe.instructions);
+                        utterance.rate = 1.0;
+                        utterance.pitch = 1.0;
+                        utterance.volume = 1;
+                        
+                        // Show audio player UI
+                        audioPlayer.classList.remove('hidden');
+                        
+                        // Speak the instructions
+                        window.speechSynthesis.speak(utterance);
+                        
+                        // Update button text during playback
+                        const button = document.querySelector(`.audio-btn[data-id="${recipeId}"]`);
+                        button.innerHTML = '<i class="fas fa-pause-circle"></i> Pause Instructions';
+                        
+                        utterance.onend = function() {
+                            button.innerHTML = '<i class="fas fa-play-circle"></i> Listen to Instructions';
+                        };
+                    } else {
+                        alert("Audio playback not supported in this browser. Instructions:\n" + recipe.instructions);
+                    }
+                } catch (error) {
+                    console.error('Error playing instructions:', error);
+                    alert('Failed to load audio instructions');
+                }
+            }
+
+            // Initialize with placeholder text
+            ingredientInput.value = "avocado, quinoa, spinach";
+        });
+    </script>
 </body>
 </html>
