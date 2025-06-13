@@ -1,0 +1,15 @@
+.card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px;
+    max-width: 300px;
+}
+
+.card img {
+    max-width: 100%;
+    height: auto;
+}
+h1{
+    color:red;
+}

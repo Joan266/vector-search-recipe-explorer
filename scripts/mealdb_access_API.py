@@ -1,7 +1,5 @@
 import requests
 import time
-import pandas as pd
-
 # ---------- 1. Get all category names ----------
 def fetch_categories():
     print("Fetching categories...")
@@ -69,12 +67,18 @@ def fetch_mealdb(limit=2500):
             time.sleep(0.2)
 
     return results
+# Replace the pandas code at the bottom of mealdb_access_API.py with:
 
 def main():
     mealdb_results = fetch_mealdb(limit=2500)
-    df = pd.DataFrame(mealdb_results)
-    df.to_csv("mealdb_recipes.csv", index=False)
-    print(f"Saved {len(df)} rows to mealdb_recipes.csv")
+    
+    import csv
+    with open("mealdb_recipes.csv", "w", newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=mealdb_results[0].keys())
+        writer.writeheader()
+        writer.writerows(mealdb_results)
+    
+    print(f"Saved {len(mealdb_results)} rows to mealdb_recipes.csv")
 
 if __name__ == "__main__":
     main()

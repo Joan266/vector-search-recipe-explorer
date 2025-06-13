@@ -12,3 +12,4 @@ unidecode==1.3.6  # Only if processing non-ASCII text
 
 # Environment Management
 python-dotenv==1.0.0
+flask-cors==4.0.0
