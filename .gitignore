@@ -35,3 +35,12 @@ Thumbs.db
 
 # Streamlit configuration
 .streamlit/config.toml
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Node (if any frontend deps)
+node_modules/
+static/dist/

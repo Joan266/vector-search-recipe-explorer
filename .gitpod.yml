@@ -1,14 +1,10 @@
-image: mcr.microsoft.com/devcontainers/python:0-3.11
-
+image: gitpod/workspace-full
 tasks:
-  - name: Create .venv and install dependencies
-    init: |
-      python3 -m venv .venv
-      . .venv/bin/activate
-      pip install --upgrade pip setuptools wheel
+  - init: |
+      python -m venv .venv
+      source .venv/bin/activate
       pip install -r requirements.txt
-    command: echo "✅ Entorno virtual y dependencias listos"
-
-vscode:
-  extensions:
-    - ms-python.python
+    command: python app.py
+ports:
+  - port: 5000
+    onOpen: open-browser
