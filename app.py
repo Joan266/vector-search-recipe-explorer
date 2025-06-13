@@ -2,7 +2,7 @@ from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS  # Add this
 from scripts.mealdb_access_API import fetch_mealdb  # New version
 
-app = Flask(__name__, static_folder='../static')  # Point to static folder
+app = Flask(__name__, static_folder='./static')  # Point to static folder
 CORS(app)  # Enable CORS
 
 # Serve static files

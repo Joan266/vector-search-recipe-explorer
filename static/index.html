@@ -1,12 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Recipe App</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Recipe Finder</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <h1>helllooo!!</h1>
-    <div id="results"></div>  <!-- Fixed missing > -->
-    <script src="app.js"></script>
+    <div class="container">
+        <header>
+            <h1>AI Recipe Finder</h1>
+            <p>Discover recipes based on what you have</p>
+        </header>
+
+        <div class="search-container">
+            <input type="text" id="ingredient-input" placeholder="Enter ingredients (e.g., eggs, flour, chicken)">
+            <button id="search-btn"><i class="fas fa-search"></i> Search</button>
+        </div>
+
+        <div id="health-meter" class="hidden">
+            <h3>Nutrition Score</h3>
+            <div class="meter">
+                <div class="health-bar" id="health-bar"></div>
+                <span id="health-score">0%</span>
+            </div>
+            <p id="health-feedback"></p>
+        </div>
+
+        <div id="results" class="recipe-grid"></div>
+
+        <audio id="audio-player" controls class="hidden"></audio>
+
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Finding delicious recipes...</p>
+        </div>
+    </div>
+
+    <script src="static/app.js"></script>
 </body>
 </html>
