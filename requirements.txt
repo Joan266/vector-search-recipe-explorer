@@ -1,15 +1,18 @@
 # Core Backend
 flask==3.0.0
-pymongo==4.5.0  # Keep your existing version
+pymongo==4.5.0
 
 # Google Cloud Integration
-google-cloud-aiplatform==1.95.1  # For Vertex AI/Gemini
-google-cloud-secret-manager==2.16.1  # For secure MongoDB URI
+google-cloud-aiplatform==1.95.1
+google-cloud-secret-manager==2.16.1
 
-# Data Processing (Optional)
-pandas==2.0.3  # Only if needed for data cleaning
-unidecode==1.3.6  # Only if processing non-ASCII text
+# Data Processing
+requests==2.31.0           # Missing for API calls
+Pillow==10.0.0            # Missing for PIL (Image processing)
+pandas==2.0.3             # Optional
+unidecode==1.3.6          # Optional
 
-# Environment Management
+# Environment & Typing
 python-dotenv==1.0.0
 flask-cors==4.0.0
+typing-extensions==4.8.0  # For Optional/List/Dict hints
