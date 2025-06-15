@@ -61,18 +61,9 @@ def clean_instructions(instructions: str) -> str:
     """Remove noisy words from instructions"""
     if not instructions:
         return ""
+    print(instructions)
     
-    # Remove common procedural phrases
-    stop_phrases = [
-        "salt to taste", "pepper to taste", "serve hot", 
-        "serve immediately", "as needed"
-    ]
-    
-    cleaned = instructions
-    for phrase in stop_phrases:
-        cleaned = cleaned.replace(phrase, "")
-    
-    return cleaned[:500]  # Truncate to 500 chars
+    return cleaned
 
 # ---------- MealDB API Functions ----------
 def fetch_categories() -> List[str]:
