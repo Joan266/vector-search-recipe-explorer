@@ -83,32 +83,50 @@ document.addEventListener('DOMContentLoaded', function() {
             recipeCard.className = 'recipe-card fade-in';
             recipeCard.style.animationDelay = `${index * 0.2}s`;
             
-           recipeCard.innerHTML = `
-            <div class="recipe-image-container">
-                <img src="${recipe.image}" alt="${recipe.name}" class="recipe-image">
-            </div>
+            recipeCard.innerHTML = `
+                <div class="recipe-image-container">
+                    <img src="${recipe.image}" alt="${recipe.name}" class="recipe-image">
+                </div>
+                
+                <div class="recipe-meta">
+                    ${recipe.category ? `<span class="meta-category"><i class="fas fa-tag"></i> ${recipe.category}</span>` : ''}
+                    ${recipe.area ? `<span class="meta-area"><i class="fas fa-globe"></i> ${recipe.area}</span>` : ''}
+                    ${recipe.score ? `<span class="meta-score"><i class="fas fa-star"></i> ${recipe.score.toFixed(2)}</span>` : ''}
+                </div>
+                
+                <div class="recipe-bottom-container">
+                    <h3 class="recipe-title">${recipe.name}</h3>
+                    <p class="ingredient-count">${recipe.ingredients.length} ingredients</p>
+                    <button class="cta-button">
+                        View Recipe <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            `;
             
-            <div class="recipe-meta">
-                ${recipe.category ? `<span class="meta-category"><i class="fas fa-tag"></i> ${recipe.category}</span>` : ''}
-                ${recipe.area ? `<span class="meta-area"><i class="fas fa-globe"></i> ${recipe.area}</span>` : ''}
-                ${recipe.score ? `<span class="meta-score"><i class="fas fa-star"></i> ${recipe.score.toFixed(2)}</span>` : ''}
-            </div>
+            // Add click event to the entire card
+            recipeCard.addEventListener('click', function(e) {
+                // Don't navigate if click was on the CTA button (let button handle it)
+                if (!e.target.closest('.cta-button')) {
+                    window.location.href = `/recipe/${recipe.id}`;
+                }
+            });
             
-            <div class="recipe-bottom-container">
-                <h3 class="recipe-title">${recipe.name}</h3>
-                <p class="ingredient-count">${recipe.ingredients.length} ingredients</p>
-                <button class="cta-button">
-                    View Recipe <i class="fas fa-arrow-right"></i>
-                </button>
-            </div>
-        `;
+            // Add click event to the CTA button specifically
+            const ctaButton = recipeCard.querySelector('.cta-button');
+            if (ctaButton) {
+                ctaButton.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent the card click from also firing
+                    window.location.href = `/recipe/${recipe.id}`;
+                });
+            }
             
             resultsContainer.appendChild(recipeCard);
         });
 
-        // Add event listeners to audio buttons
+        // Keep your existing audio button listeners if needed
         document.querySelectorAll('.audio-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const recipeId = this.getAttribute('data-id');
                 playInstructions(recipeId);
             });

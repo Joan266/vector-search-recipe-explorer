@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ recipe.name }} - Green Recipe Finder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation Header -->
+        <header class="page-header">
+            <a href="/" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1>{{ recipe.name }}</h1>
+            <a href="/" class="home-button">
+                <i class="fas fa-home"></i>
+            </a>
+        </header>
+
+        <div class="recipe-meta">
+            {% if recipe.category %}
+            <span class="meta-category"><i class="fas fa-tag"></i> {{ recipe.category }}</span>
+            {% endif %}
+            {% if recipe.area %}
+            <span class="meta-area"><i class="fas fa-globe"></i> {{ recipe.area }}</span>
+            {% endif %}
+        </div>
+
+        <div class="recipe-detail">
+            <div class="recipe-header">
+                <img src="{{ recipe.img_url }}" alt="{{ recipe.name }}" class="recipe-main-image">
+                <div class="recipe-actions">
+                    <a href="/recipe/{{ recipe.id }}/audio" class="cta-button audio-link">
+                        <i class="fas fa-headphones"></i> Listen to Instructions
+                    </a>
+                </div>
+            </div>
+
+            <div class="recipe-content">
+                <section class="ingredients-section">
+                    <h2><i class="fas fa-carrot"></i> Ingredients</h2>
+                    <ul class="ingredients-list">
+                        {% for ingredient in recipe.ingredients %}
+                        <li>{{ ingredient }}</li>
+                        {% endfor %}
+                    </ul>
+                </section>
+
+                <section class="instructions-section">
+                    <h2><i class="fas fa-list-ol"></i> Instructions</h2>
+                    <ol class="instructions-list">
+                        {% for step in recipe.instructions.split('. ') %}
+                        {% if step.strip() %}
+                        <li>{{ step.strip() }}</li>
+                        {% endif %}
+                        {% endfor %}
+                    </ol>
+                </section>
+            </div>
+        </div>
+
+        <footer>
+            <p>Green Recipe Finder - Healthy Eating Made Simple</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click event for audio link
+            document.querySelector('.audio-link').addEventListener('click', function(e) {
+                if (!recipeData.audio_steps || recipeData.audio_steps.length === 0) {
+                    e.preventDefault();
+                    alert('No audio instructions available for this recipe');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

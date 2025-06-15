@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Green Recipe Finder</title>
-    <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -16,17 +16,17 @@
 
         <div class="search-container">
             <input type="text" id="ingredient-input" placeholder="Enter ingredients (e.g., eggs, flour, chicken)">
+            <div class="image-upload">
+                <label for="upload-btn" class="upload-label">
+                    <i class="fas fa-camera"></i> Upload Image
+                </label>
+                <input type="file" id="upload-btn" accept="image/*" capture="environment">
+                <button id="clear-image" class="hidden"><i class="fas fa-times"></i></button>
+            </div>
             <button id="search-btn"><i class="fas fa-search"></i> Find Recipes</button>
         </div>
 
-        <div id="health-meter" class="hidden">
-            <h3><i class="fas fa-heartbeat"></i> Nutrition Score</h3>
-            <div class="meter">
-                <div class="health-bar" id="health-bar"></div>
-                <span id="health-score">0%</span>
-            </div>
-            <p id="health-feedback"></p>
-        </div>
+        <div id="image-preview" class="hidden"></div>
 
         <div id="results" class="recipe-grid"></div>
 
@@ -42,6 +42,6 @@
         </footer>
     </div>
 
-    <script src="static/app.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

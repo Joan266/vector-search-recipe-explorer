@@ -12,9 +12,13 @@ import base64
 from flask_cors import CORS
 import traceback
 import numpy as np
+from typing import List, Dict, Optional
+from bson import ObjectId
+from google.cloud import texttospeech, language_v1, storage
+import re
+from bson.errors import InvalidId
+app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Initialize Flask app
-app = Flask(__name__, static_folder='./static')
 CORS(app)  # Enable CORS for all routes
 
 # ---------- 1. Load environment variables ----------
@@ -24,11 +28,25 @@ DB_NAME = os.getenv("DB_NAME", "eco_footprint")
 COLLECTION_NAME = "mealdb_recipes"
 GCP_PROJECT = os.getenv("GCP_PROJECT")
 GCP_REGION = os.getenv("GCP_REGION", "us-central1")
-
+BUCKET_NAME = os.getenv("BUCKET_NAME", "recipe-audio-bucket")
+VOICE_CONFIG = texttospeech.VoiceSelectionParams(
+    language_code="en-US",
+    name="en-US-Standard-C",
+    ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+)
+AUDIO_CONFIG = texttospeech.AudioConfig(
+    audio_encoding=texttospeech.AudioEncoding.MP3
+)
 # ---------- 2. Initialize Vertex AI ----------
 vertexai.init(project=GCP_PROJECT, location=GCP_REGION)
 model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding@001")
-
+# Initialize clients (add this near your other initializations)
+def initialize_clients():
+    return {
+        "nlp": language_v1.LanguageServiceClient(),
+        "tts": texttospeech.TextToSpeechClient(),
+        "storage": storage.Client()
+    }
 def download_image(url):
     """Download image from URL and return PIL Image object"""
     try:
@@ -209,9 +227,240 @@ def hybrid_search(image=None, text=None, k=5, image_weight=0.5, text_weight=0.5)
     valid_results = [r for r in ranked_results if is_valid_result(r, image_weight, text_weight)]
     return valid_results[:k]
 
+
+def generate_audio_steps(recipe):
+    """Generate audio instructions for a recipe if missing"""
+    if 'audio_steps' in recipe and recipe['audio_steps']:
+        return recipe['audio_steps']
+    
+    print(f"Generating audio for recipe: {recipe['name']}")
+    # Audio generation logic from your script
+    normalized = normalize_instructions(recipe['instructions'])
+    steps = split_instructions(normalized)
+    
+    audio_steps = []
+    for i, step in enumerate(steps):
+        analysis = analyze_instruction(step)
+        ssml = transform_to_ssml(step, analysis)
+        audio_url = generate_audio(ssml, str(recipe['_id']), i)
+        
+        if audio_url:
+            audio_steps.append({
+                "step_number": i,
+                "text": step,
+                "audio_url": audio_url
+            })
+    
+    # Update MongoDB
+    client = MongoClient(MONGODB_URI)
+    collection = client[DB_NAME][COLLECTION_NAME]
+    collection.update_one(
+        {"_id": recipe['_id']},
+        {"$set": {"audio_steps": audio_steps}}
+    )
+    
+    return audio_steps
+
+def normalize_instructions(text: str) -> str:
+    """Normalize recipe instructions text with debug prints"""
+    print("\n📝 Normalizing instructions...")
+    if not text:
+        print("⚠️ No instructions found")
+        return ""
+        
+    original_length = len(text)
+    print(f"  Original length: {original_length} chars")
+    
+    # Replace problematic characters and normalize whitespace
+    text = re.sub(r'[\r\n]+', '. ', text)
+    text = re.sub(r'\.{2,}', '.', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Capitalize first letter of each sentence
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = [s[0].upper() + s[1:] if s else s for s in sentences]
+    normalized = ' '.join(sentences)
+    
+    print(f"  Normalized length: {len(normalized)} chars")
+    print("  Sample normalized text:")
+    print(f"  {normalized[:100]}{'...' if len(normalized)>100 else ''}")
+    
+    return normalized
+
+
+def split_instructions(normalized_text: str) -> List[str]:
+    """Split instructions into individual steps with debug prints"""
+    print("\n✂️ Splitting instructions into steps...")
+    if not normalized_text:
+        print("⚠️ No text to split")
+        return []
+    
+    # Improved splitting pattern that:
+    # 1. Handles numbered steps (1., 2.) 
+    # 2. Splits on sentence boundaries
+    # 3. Removes trailing step numbers
+    steps = re.split(r'(?<=\d)\.\s+|(?<=[.!?])\s+(?=[A-Z\d])', normalized_text)
+    
+    # Clean each step
+    cleaned_steps = []
+    for step in steps:
+        if not step.strip():
+            continue
+            
+        # Remove any leading numbers/dots/whitespace
+        step = re.sub(r'^\d+\.?\s*', '', step.strip())
+        
+        # Remove any trailing partial words from bad splits
+        step = re.sub(r'\s+\S+$', '', step) if len(step.split()) > 3 else step
+        
+        if step:
+            cleaned_steps.append(step)
+    
+    print(f"  Found {len(cleaned_steps)} steps")
+    for i, step in enumerate(cleaned_steps[:3]):  # Print first 3 steps as sample
+        print(f"    Step {i+1}: {step[:70]}{'...' if len(step)>70 else ''}")
+    if len(cleaned_steps) > 3:
+        print(f"    (...and {len(cleaned_steps)-3} more steps)")
+        
+    return cleaned_steps
+
+def analyze_instruction(text: str) -> Dict:
+    """Analyze instruction text for verbs and time phrases with debug prints"""
+    print(f"\n🔍 Analyzing text: '{text[:50]}{'...' if len(text)>50 else ''}'")
+    if not text:
+        print("⚠️ No text to analyze")
+        return {"action_verbs": [], "time_phrases": []}
+        
+    try:
+        clients = initialize_clients()
+        document = language_v1.Document(
+            content=text,
+            type_=language_v1.Document.Type.PLAIN_TEXT
+        )
+        response = clients["nlp"].analyze_syntax(request={"document": document})
+            
+        # Extract verbs
+        verbs = [
+            token.text.content.lower()
+            for token in response.tokens
+            if token.part_of_speech.tag == language_v1.PartOfSpeech.Tag.VERB
+        ]
+        unique_verbs = list(set(verbs))  # Remove duplicates
+        
+        # Find time-related phrases
+        time_phrases = re.findall(
+            r'\b\d+\s*(?:minutes?|hours?|seconds?|days?|weeks?)\b|\b\d+[°º]?[CF]\b',
+            text,
+            flags=re.IGNORECASE
+        )
+        
+        # Check for warnings
+        warning_words = ["careful", "warning", "hot", "sharp", "danger"]
+        contains_warning = any(word in text.lower() for word in warning_words)
+        
+        print("  Analysis results:")
+        print(f"    Action verbs: {unique_verbs[:5]}{'...' if len(unique_verbs)>5 else ''}")
+        print(f"    Time phrases: {time_phrases}")
+        print(f"    Contains warning: {contains_warning}")
+        
+        return {
+            "action_verbs": unique_verbs,
+            "time_phrases": time_phrases,
+            "contains_warning": contains_warning
+        }
+    except Exception as e:
+        print(f"❌ Text analysis failed: {str(e)}")
+        return {"action_verbs": [], "time_phrases": []}
+
+def transform_to_ssml(instruction: str, analysis: Dict) -> str:
+    """Convert instruction text to SSML with enhancements and debug prints"""
+    print("\n🎚️ Converting to SSML...")
+    if not instruction:
+        print("⚠️ No instruction to convert")
+        return ""
+        
+    print("  Original instruction:")
+    print(f"  {instruction[:100]}{'...' if len(instruction)>100 else ''}")
+    
+    # Start with basic SSML
+    ssml = f"<speak>{instruction}</speak>"
+    
+    # Add emphasis on action verbs
+    for verb in analysis.get("action_verbs", []):
+        ssml = re.sub(
+            rf'\b{re.escape(verb)}\b',
+            f'<emphasis level="strong">{verb}</emphasis>',
+            ssml,
+            flags=re.IGNORECASE
+        )
+    
+    # Add proper pauses for time phrases
+    for phrase in analysis.get("time_phrases", []):
+        ssml = ssml.replace(
+            phrase,
+            f'<say-as interpret-as="duration">{phrase}</say-as><break time="300ms"/>'
+        )
+    
+    # Add warning prosody if needed
+    if analysis.get("contains_warning"):
+        ssml = ssml.replace("<speak>", '<speak><prosody rate="slow" pitch="high">')
+        ssml = ssml.replace("</speak>", "</prosody></speak>")
+    
+    print("  Generated SSML:")
+    print(f"  {ssml[:150]}{'...' if len(ssml)>150 else ''}")
+    
+    return ssml
+
+def generate_audio(ssml_text: str, recipe_id: str, step_index: int) -> Optional[str]:
+    clients = initialize_clients()
+    try:
+        synthesis_input = texttospeech.SynthesisInput(ssml=ssml_text)
+        response = clients["tts"].synthesize_speech(
+            input=synthesis_input,
+            voice=VOICE_CONFIG,
+            audio_config=AUDIO_CONFIG
+        )
+        
+        bucket = clients["storage"].bucket(BUCKET_NAME)
+        filename = f"recipes/{recipe_id}/step_{step_index}.mp3"
+        blob = bucket.blob(filename)
+        blob.upload_from_string(response.audio_content, content_type="audio/mpeg")
+        return f"https://storage.googleapis.com/{BUCKET_NAME}/{filename}"
+    except Exception as e:
+        print(f"Audio generation failed: {str(e)}")
+        return None
+
+@app.route("/recipe/<recipe_id>")
+def recipe_detail(recipe_id):
+    try:
+        object_id = ObjectId(recipe_id)
+    except InvalidId:
+        return "Invalid recipe ID format", 400
+
+    try:
+        client = MongoClient(MONGODB_URI)
+        collection = client[DB_NAME][COLLECTION_NAME]
+        recipe = collection.find_one({"_id": object_id})
+        
+        if not recipe:
+            return "Recipe not found", 404
+        
+        # Generate audio steps BEFORE removing _id
+        recipe['audio_steps'] = generate_audio_steps(recipe)
+        
+        # Now convert for the template
+        recipe['id'] = str(recipe['_id'])
+        del recipe['_id']
+        
+        return render_template('recipe_detail.html', recipe=recipe)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return f"Error: {str(e)}", 500
+
 @app.route('/')
 def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
+    return render_template('index.html')
 
 @app.route("/api/recipes/search", methods=["POST"])
 def search_recipes():
@@ -256,6 +505,33 @@ def search_recipes():
         traceback.print_exc()
         # Return empty array on error
         return jsonify([])
+@app.route("/recipe/<recipe_id>/audio")
+def recipe_audio(recipe_id):
+    try:
+        object_id = ObjectId(recipe_id)
+    except InvalidId:
+        return "Invalid recipe ID format", 400
+
+    try:
+        client = MongoClient(MONGODB_URI)
+        collection = client[DB_NAME][COLLECTION_NAME]
+        recipe = collection.find_one({"_id": object_id})
+        
+        if not recipe:
+            return "Recipe not found", 404
+        
+        # Generate audio steps if needed
+        recipe['audio_steps'] = generate_audio_steps(recipe)
+        
+        # Convert for the template
+        recipe['id'] = str(recipe['_id'])
+        del recipe['_id']
+        
+        return render_template('audio_instructions.html', recipe=recipe)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return f"Error: {str(e)}", 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
