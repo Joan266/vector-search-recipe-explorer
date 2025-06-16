@@ -1,0 +1,102 @@
+/* Audio Guide Styling */
+.audio-guide-container {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.audio-controls {
+    background: var(--primary-light);
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.audio-controls button {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary-dark);
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.audio-controls button:hover {
+    transform: scale(1.1);
+    background: var(--primary);
+}
+
+.audio-controls button:disabled {
+    opacity: 0.5;
+    transform: none;
+}
+
+.audio-steps {
+    background: white;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.audio-step {
+    padding: 1.5rem;
+    border-bottom: 1px solid #eee;
+    transition: all 0.3s;
+}
+
+.audio-step.active {
+    background: rgba(108, 189, 73, 0.1);
+}
+
+.audio-step.active .step-text {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.audio-step:not(.active) .step-text {
+    color: #777;
+}
+
+.step-number {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 28px;
+    margin-right: 10px;
+    font-size: 0.9rem;
+}
+
+.audio-step.active .step-number {
+    background: var(--primary-dark);
+}
+
+/* Custom scrollbar */
+.audio-steps::-webkit-scrollbar {
+    width: 8px;
+}
+
+.audio-steps::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.audio-steps::-webkit-scrollbar-thumb {
+    background: var(--primary-light);
+    border-radius: 4px;
+}
+
+.audio-steps::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <img src="{{ recipe.img_url }}" class="img-fluid rounded" alt="{{ recipe.name }}">
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Nutritional Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-2">
+                    <div class="progress-bar 
+                        {% if recipe.health_score > 3 %}bg-success
+                        {% elif recipe.health_score < 2 %}bg-danger
+                        {% else %}bg-warning{% endif %}" 
+                        role="progressbar" 
+                        style="width: {{ (recipe.health_score / 5) * 100 }}%"
+                        aria-valuenow="{{ recipe.health_score }}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="5">
+                        Health Score: {{ recipe.health_score }}/5
+                    </div>
+                </div>
+                <p>{{ recipe.health_description }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <h1>{{ recipe.name }}</h1>
+        <p class="text-muted">
+            <span class="badge bg-primary">{{ recipe.category }}</span>
+            <span class="badge bg-secondary">{{ recipe.area }}</span>
+            <span class="badge bg-info">
+                Difficulty: {{ recipe.time_analysis.recipe_difficulty }}
+            </span>
+            <span class="badge bg-dark">
+                {{ recipe.time_analysis.total_estimated_time_minutes }} minutes
+            </span>
+        </p>
+        
+        <h3 class="mt-4">Ingredients</h3>
+        <ul class="list-group mb-4">
+            {% for ingredient in recipe.ingredients %}
+            <li class="list-group-item">{{ ingredient }}</li>
+            {% endfor %}
+        </ul>
+        
+        <h3>Instructions</h3>
+        <div class="audio-guide-container mb-4">
+            <div class="audio-controls">
+                <button id="prev-step" disabled>
+                    <i class="bi bi-skip-backward-fill"></i>
+                </button>
+                <button id="play-pause">
+                    <i class="bi bi-play-fill"></i>
+                </button>
+                <button id="next-step">
+                    <i class="bi bi-skip-forward-fill"></i>
+                </button>
+            </div>
+            <div class="audio-steps" id="audio-guide">
+                {% for step in recipe.audio_steps %}
+                <div class="audio-step" data-step="{{ loop.index0 }}" data-audio-url="{{ step.audio_url }}">
+                    <div>
+                        <span class="step-number">{{ loop.index }}</span>
+                        <span class="step-text">{{ step.text }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
