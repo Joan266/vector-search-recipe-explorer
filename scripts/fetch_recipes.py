@@ -1,6 +1,7 @@
 import requests
 import time
-# ---------- 1. Get all category names ----------
+import csv
+
 def fetch_categories():
     print("Fetching categories...")
     url = "https://www.themealdb.com/api/json/v1/1/categories.php"
@@ -8,7 +9,6 @@ def fetch_categories():
     data = response.json()
     return [cat["strCategory"] for cat in data["categories"]]
 
-# ---------- 2. Get all meal IDs from each category ----------
 def fetch_meals_by_category(category):
     url = f"https://www.themealdb.com/api/json/v1/1/filter.php?c={category}"
     response = requests.get(url)
@@ -16,7 +16,6 @@ def fetch_meals_by_category(category):
     meals = data.get("meals", [])
     return [meal["idMeal"] for meal in meals]
 
-# ---------- 3. Fetch full meal details by ID ----------
 def fetch_meal_details(meal_id):
     url = f"https://www.themealdb.com/api/json/v1/1/lookup.php?i={meal_id}"
     response = requests.get(url)
@@ -26,25 +25,37 @@ def fetch_meal_details(meal_id):
         return None
 
     ingredients = []
+    measures = []
+    combined_ingredients = []
+    
     for i in range(1, 21):
         ing = meal.get(f"strIngredient{i}")
         meas = meal.get(f"strMeasure{i}")
-        if ing and ing.strip():
-            ingredients.append(f"{meas.strip()} {ing.strip()}")
-        put all the mesaruments in and array variable so i can study with pandas what types (units) are being use I MEAN UNIQUE VALUES and see if i can normalize that, I ALSO want a ingrediensts array yo now the unique values of the dataset
         
+        if not ing or str(ing).strip() == "":
+            continue
+            
+        ing = str(ing).strip()
+        meas = str(meas).strip() if meas else ""
+        
+        ingredients.append(ing)
+        measures.append(meas)
+        combined_ingredients.append(f"{meas} {ing}" if meas else ing)
+
     return {
+        "idMeal": meal_id,
         "name": meal.get("strMeal"),
         "category": meal.get("strCategory"),
         "area": meal.get("strArea"),
         "instructions": meal.get("strInstructions"),
-        "ingredients": ", ".join(ingredients),
+        "ingredients": ingredients,
+        "measures": measures,
+        "combined_ingredients": ", ".join(combined_ingredients),
         "img_url": meal.get("strMealThumb"),
-        "measures":measurments array,
         "tags": meal.get("strTags"),
+        "youtube": meal.get("strYoutube"),
     }
 
-# ---------- 4. Combine and Save ----------
 def fetch_mealdb(limit=2500):
     print("Fetching from TheMealDB by category...")
     results = []
@@ -56,7 +67,7 @@ def fetch_mealdb(limit=2500):
         meal_ids = fetch_meals_by_category(category)
         for meal_id in meal_ids:
             if meal_id in seen_ids:
-                continue  # Avoid duplicates
+                continue
             seen_ids.add(meal_id)
 
             meal_details = fetch_meal_details(meal_id)
@@ -68,18 +79,14 @@ def fetch_mealdb(limit=2500):
             time.sleep(0.2)
 
     return results
-# Replace the pandas code at the bottom of mealdb_access_API.py with:
 
-def main():
-    mealdb_results = fetch_mealdb(limit=2500)
-    
-    import csv
-    with open("mealdb_recipes.csv", "w", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=mealdb_results[0].keys())
+def save_to_csv(data, filename="mealdb_recipes.csv"):
+    with open(filename, "w", newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=data[0].keys())
         writer.writeheader()
-        writer.writerows(mealdb_results)
-    
-    print(f"Saved {len(mealdb_results)} rows to mealdb_recipes.csv")
+        writer.writerows(data)
+    print(f"Saved {len(data)} rows to {filename}")
 
 if __name__ == "__main__":
-    main()
+    recipes = fetch_mealdb(limit=2500)
+    save_to_csv(recipes)
