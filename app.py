@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify,send_from_directory
 from pymongo import MongoClient
-from config import MONGODB_URI, DB_NAME, COLLECTION_NAME
+from config import MONGODB_URI, DB_NAME, COLLECTION_NAME,GCP_PROJECT,GCP_REGION
 import os
 from bson import ObjectId
 import vertexai
@@ -13,18 +13,16 @@ import base64
 from flask_cors import CORS
 
 
-
 app = Flask(__name__)
 CORS(app) 
 # Initialize Vertex AI
-vertexai.init(project="your-gcp-project", location="us-central1")
+vertexai.init(project=GCP_PROJECT, location=GCP_REGION)
 model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding@001")
 
 # MongoDB connection
 client = MongoClient(MONGODB_URI)
 db = client[DB_NAME]
 recipes_collection = db[COLLECTION_NAME]
-
 def download_image(url):
     """Download image from URL and return PIL Image object"""
     try:
@@ -193,6 +191,9 @@ def hybrid_search(image=None, text=None, k=5, image_weight=0.5, text_weight=0.5)
     valid_results = [r for r in ranked_results if is_valid_result(r, image_weight, text_weight)]
     return valid_results[:k]
 
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
 @app.route('/')
 def index():
     """Homepage with recipe carousel"""
@@ -212,15 +213,23 @@ def index():
 @app.route('/search', methods=['POST'])
 def search():
     try:
+        # Debug: Log incoming request
+        app.logger.info(f"Received search request: {request.data}")
+        
         data = request.get_json()
         if not data:
+            app.logger.error("No JSON data received")
             return jsonify({"error": "Invalid request format"}), 400
             
         query = data.get('query')
         image = data.get('image')
         
         if not query and not image:
+            app.logger.error("No search criteria provided")
             return jsonify({"error": "Please provide either text or image"}), 400
+        
+        # Debug: Log search parameters
+        app.logger.info(f"Search params - query: {query}, image: {bool(image)}")
             
         results = hybrid_search(
             image=image,
@@ -234,10 +243,17 @@ def search():
         for recipe in results:
             recipe['_id'] = str(recipe['_id'])
         
+        # Debug: Log successful search
+        app.logger.info(f"Search successful, found {len(results)} results")
         return jsonify(results)
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Detailed error logging
+        app.logger.error(f"Search failed: {str(e)}", exc_info=True)
+        return jsonify({
+            "error": "Search failed",
+            "details": str(e)
+        }), 500
 
 @app.route('/recipe/<recipe_id>')
 def recipe_detail(recipe_id):
@@ -258,4 +274,7 @@ def recipe_detail(recipe_id):
         return f"Error: {str(e)}", 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Get port from environment variable or default to 5000
+    port = int(os.environ.get("PORT", 5000))
+    # Run on all interfaces (0.0.0.0) for Gitpod
+    app.run(host='0.0.0.0', port=port, debug=True)
