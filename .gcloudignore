@@ -1,0 +1,14 @@
+# .gcloudignore additions
+/.env
+/.venv
+/vertex-key.json  # SECURITY RISK - Use Secret Manager instead
+/test_scripts
+/pipeline
+*.md
+LICENSE
+.git/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.swp
+*.swo
