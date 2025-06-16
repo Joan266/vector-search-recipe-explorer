@@ -231,8 +231,6 @@ def main(limit: int = 304):
     collection.create_index([("name", "text")])
     collection.create_index("category")
     collection.create_index("area")
-    collection.create_index("techniques")
-    collection.create_index([("ingredients_text", "text")])
     
     # Vector search index (for Atlas)
     if "atlas" in MONGODB_URI.lower():

@@ -55,7 +55,6 @@ class SpeechSynthesizer:
         try:
             # Transform to SSML first
             ssml_text = self._transform_to_ssml(text, analysis)
-            
             synthesis_input = texttospeech.SynthesisInput(ssml=ssml_text)
             response = self.tts_client.synthesize_speech(
                 input=synthesis_input,

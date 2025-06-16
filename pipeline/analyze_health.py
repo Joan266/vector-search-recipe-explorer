@@ -91,7 +91,8 @@ Ingredients:\n""" + "\n".join([f"- {ingredient}" for ingredient in ingredients])
                 continue
                 
             health_data = self.analyze_ingredients(recipe['ingredients'])
-            recipe['health_analysis'] = health_data
+            recipe['health_score'] = health_data.get("health_score", 0)
+            recipe['health_description'] = health_data.get("health_description", 'Analysis failed')
             analyzed_recipes.append(recipe)
             
         return analyzed_recipes

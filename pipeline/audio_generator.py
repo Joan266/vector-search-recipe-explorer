@@ -30,7 +30,7 @@ class AudioGenerator:
                     audio_steps.append({
                         "step_number": i,
                         "text": step,
-                        "audio_url": audio_url  # No analysis in output
+                        "audio_url": audio_url  
                     })
             
             return {**recipe, "audio_steps": audio_steps} if audio_steps else None
