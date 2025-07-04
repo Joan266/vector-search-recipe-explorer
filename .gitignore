@@ -1,68 +1,75 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-
 # Environment variables
 .env
-*.env
 .env.local
 .env.development
 .env.production
 
-# IDE specific files
+# Google Cloud credentials
+vertex-key.json
+service-account-key.json
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*.sublime-workspace
-*.sublime-project
+*~
 
-# System files
+# OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-desktop.ini
 
-# Logs and databases
+# Logs
 *.log
-*.sqlite
-*.db
+logs/
 
-# Testing and coverage
-.coverage
-htmlcov/
-.pytest_cache/
-test-results.xml
-
-# Build and distribution
-dist/
-build/
-*.egg-info/
-*.egg
-*.manifest
-*.spec
-
-# Project specific
+# Flask
 instance/
 .webassets-cache
 
-# Node.js (if any frontend dependencies)
-node_modules/
-static/dist/
-static/css/main*.css
-static/js/main*.js
+# Data files
+*.csv
+*.json
+!.env.example
+!package*.json
 
-# Jupyter Notebook
-.ipynb_checkpoints/
-
-# Streamlit
-.streamlit/
+# Temporary files
+*.tmp
+*.temp

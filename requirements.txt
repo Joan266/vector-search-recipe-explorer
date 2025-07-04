@@ -1,29 +1,21 @@
-# === Core Dependencies (Pinned) ===
-flask==2.3.2  # Downgraded for stability (Flask 3.0 may have breaking changes)
+# === Core Dependencies ===
+flask==2.3.2
 pymongo==4.7.0
-gunicorn==21.2.0  # Must-have for production WSGI server
+python-dotenv==1.0.0  # For loading .env files
+flask-cors==4.0.0
 
 # === Google Cloud Services ===
 google-cloud-aiplatform==1.95.1  # Vertex AI
-google-cloud-logging==3.8.0  # Critical for production logging
-google-cloud-secret-manager==2.16.1  # For secure credentials
+google-cloud-storage==2.10.0  # For audio file storage
+google-cloud-texttospeech==2.15.0  # For audio generation
+google-cloud-language==2.8.0  # For text analysis
 
-# === Optional Google Services ===
-google-cloud-storage==2.10.0  # Only if using GCS
-google-cloud-texttospeech==2.15.0  # Only if using TTS
-google-cloud-language==2.8.0  # Only if using NLP
-
-# === Security & Performance ===
-flask-limiter==2.8.1  # Rate limiting
-pyjwt==2.8.0  # JWT support
-cryptography==41.0.7  # Encryption
+# === AI/ML Dependencies ===
+google-generativeai==0.3.2  # Gemini API
 
 # === Data Processing ===
 requests==2.31.0
 Pillow==10.0.0
-python-dotenv==1.0.0  # Dev-only (will be ignored in prod)
-flask-cors==4.0.0
 
-# === Optimization ===
-greenlet==3.0.1  # Gevent compat
-gevent==23.9.1  # Async worker support
+# === Development Dependencies ===
+gunicorn==21.2.0  # For production deployment (optional in dev)

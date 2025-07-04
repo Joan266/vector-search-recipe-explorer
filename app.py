@@ -2,7 +2,7 @@ import os
 import logging
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from pymongo import MongoClient, errors
-from config import MONGODB_URI, DB_NAME, COLLECTION_NAME, GCP_PROJECT, GCP_REGION
+from config import MONGODB_URI, DB_NAME, COLLECTION_NAME, GCP_PROJECT, GCP_REGION, FLASK_ENV, FLASK_SECRET_KEY
 from bson import ObjectId
 import vertexai
 from vertexai.vision_models import Image, MultiModalEmbeddingModel
@@ -12,31 +12,39 @@ from io import BytesIO
 import tempfile
 import base64
 from flask_cors import CORS
-from google.cloud import logging as cloud_logging
 
-# Initialize Cloud Logging
-logging_client = cloud_logging.Client()
-logging_client.setup_logging()
+# Configure logging based on environment
+if FLASK_ENV == "development":
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    from google.cloud import logging as cloud_logging
+    logging_client = cloud_logging.Client()
+    logging_client.setup_logging()
 
 app = Flask(__name__)
 CORS(app)
 
-# Production Configuration
+# Configuration
 app.config.update(
-    SECRET_KEY=os.environ.get('FLASK_SECRET_KEY', os.urandom(24)),
-    JSONIFY_PRETTYPRINT_REGULAR=False,  # Disable in production
+    SECRET_KEY=FLASK_SECRET_KEY,
+    JSONIFY_PRETTYPRINT_REGULAR=FLASK_ENV == "development",  # Pretty print in dev
     MAX_CONTENT_LENGTH=16 * 1024 * 1024  # 16MB upload limit
 )
 
 # Initialize Vertex AI
-vertexai.init(project=GCP_PROJECT, location=GCP_REGION)
-model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding@001")
+try:
+    vertexai.init(project=GCP_PROJECT, location=GCP_REGION)
+    model = MultiModalEmbeddingModel.from_pretrained("multimodalembedding@001")
+    print("✅ Vertex AI initialized successfully")
+except Exception as e:
+    logging.error(f"❌ Vertex AI initialization failed: {str(e)}")
+    model = None
 
-# MongoDB Connection with Pooling
+# MongoDB Connection with error handling
 try:
     client = MongoClient(
         MONGODB_URI,
-        maxPoolSize=50,
+        maxPoolSize=50 if FLASK_ENV != "development" else 10,
         connectTimeoutMS=30000,
         socketTimeoutMS=30000,
         serverSelectionTimeoutMS=30000
@@ -44,8 +52,10 @@ try:
     client.admin.command('ping')  # Test connection
     db = client[DB_NAME]
     recipes_collection = db[COLLECTION_NAME]
+    print(f"✅ MongoDB connected successfully to {DB_NAME}.{COLLECTION_NAME}")
 except errors.ConnectionFailure as e:
-    logging.critical(f"MongoDB connection failed: {str(e)}")
+    logging.critical(f"❌ MongoDB connection failed: {str(e)}")
+    print("Please check your MONGODB_URI in the .env file")
     raise
 
 def download_image(url):
@@ -60,6 +70,10 @@ def download_image(url):
 
 def get_embeddings(image=None, text=None):
     """Generate embeddings with Vertex AI"""
+    if not model:
+        logging.error("Vertex AI model not available")
+        return None
+        
     vertex_image = None
     
     if image and isinstance(image, str) and image.startswith('data:image'):
@@ -295,6 +309,7 @@ def server_error(e):
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    # Production entry point
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    # Development server
+    port = int(os.environ.get("PORT", 5000))
+    debug = FLASK_ENV == "development"
+    app.run(host='0.0.0.0', port=port, debug=debug)
