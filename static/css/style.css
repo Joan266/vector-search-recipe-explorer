@@ -100,3 +100,52 @@
     background: var(--primary);
 }
 
+/* Flash-style loading animation */
+.search-redirecting {
+    position: relative;
+    overflow: hidden;
+}
+
+.search-redirecting::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255,255,255,0.8), 
+        transparent);
+    animation: searchRedirecting 1.5s infinite;
+}
+
+@keyframes searchRedirecting {
+    100% { left: 100%; }
+}
+/* Search transition effects */
+.search-transition {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    pointer-events: none;
+    animation: searchTransition 0.3s ease-out;
+}
+
+.search-complete #search-results {
+    opacity: 0;
+    animation: searchComplete 0.5s 0.3s forwards;
+}
+
+@keyframes searchTransition {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes searchComplete {
+    to { opacity: 1; }
+}

@@ -89,82 +89,130 @@ def get_embeddings(image=None, text=None):
         logging.error(f"Vertex AI error: {str(e)}")
         return None
 
+def is_valid_result(result, image_weight, text_weight):
+    """Determine if a search result meets quality thresholds"""
+    MIN_COMBINED_SCORE = 0.25
+    MIN_COMPONENT_SCORE = 0.15
+    
+    if result.get('combined_score', 0) < MIN_COMBINED_SCORE:
+        return False
+    
+    if image_weight > 0 and 'img_score' in result and result['img_score'] < MIN_COMPONENT_SCORE:
+        return False
+        
+    if text_weight > 0 and 'text_score' in result and result['text_score'] < MIN_COMPONENT_SCORE:
+        return False
+        
+    return True
+
 def hybrid_search(image=None, text=None, k=5, image_weight=0.5, text_weight=0.5):
-    """Hybrid vector search with MongoDB"""
-    try:
-        total_weight = image_weight + text_weight
-        if total_weight <= 0:
-            raise ValueError("Invalid weights")
-        
-        embeddings = get_embeddings(image, text)
-        if not embeddings:
-            raise ValueError("Embedding generation failed")
-
-        pipeline = []
-        
-        if embeddings["image_embedding"]:
-            pipeline.append({
-                "$vectorSearch": {
-                    "index": "recipe_img_vector_index",
-                    "path": "image_embedding",
-                    "queryVector": embeddings["image_embedding"],
-                    "numCandidates": 100,
-                    "limit": k * 3
+    """Perform proper hybrid search combining image and text results"""
+    # Validate weights
+    total_weight = image_weight + text_weight
+    if total_weight <= 0:
+        raise ValueError("Weights must sum to a positive value")
+    
+    # Normalize weights
+    image_weight /= total_weight
+    text_weight /= total_weight
+    
+    # Get embeddings
+    embeddings = get_embeddings(image, text)
+    if not embeddings or (not embeddings["image_embedding"] and not embeddings["text_embedding"]):
+        raise ValueError("Failed to get valid embeddings")
+    
+    # Connect to MongoDB
+    client = MongoClient(MONGODB_URI)
+    collection = client[DB_NAME][COLLECTION_NAME]
+    results = []
+    
+    # Perform image vector search if image embedding exists
+    if embeddings["image_embedding"]:
+        try:
+            img_results = collection.aggregate([
+                {
+                    "$vectorSearch": {
+                        "index": "recipe_img_vector_index",
+                        "path": "image_embedding",
+                        "queryVector": embeddings["image_embedding"],
+                        "numCandidates": 100,
+                        "limit": k * 3  # Get extra candidates for filtering
+                    }
+                },
+                {
+                    "$project": {
+                        "_id": 1,
+                        "name": 1,
+                        "category": 1,
+                        "area": 1,
+                        "img_url": 1,
+                        "health_score": 1,
+                        "img_score": {"$meta": "vectorSearchScore"}
+                    }
                 }
-            })
-
-        if embeddings["text_embedding"]:
-            pipeline.append({
-                "$vectorSearch": {
-                    "index": "recipe_text_vector_index",
-                    "path": "text_embedding",
-                    "queryVector": embeddings["text_embedding"],
-                    "numCandidates": 100,
-                    "limit": k * 3
+            ])
+            results.extend(list(img_results))
+        except Exception as e:
+            print(f"Image vector search failed: {str(e)}")
+    
+    # Perform text vector search if text embedding exists
+    if embeddings["text_embedding"]:
+        try:
+            text_results = collection.aggregate([
+                {
+                    "$vectorSearch": {
+                        "index": "recipe_text_vector_index",
+                        "path": "text_embedding",
+                        "queryVector": embeddings["text_embedding"],
+                        "numCandidates": 100,
+                        "limit": k * 3  # Get extra candidates for filtering
+                    }
+                },
+                {
+                    "$project": {
+                        "_id": 1,
+                        "name": 1,
+                        "category": 1,
+                        "area": 1,
+                        "img_url": 1,
+                        "health_score": 1,
+                        "text_score": {"$meta": "vectorSearchScore"}
+                    }
                 }
-            })
-
-        if not pipeline:
-            return []
-
-        pipeline.append({
-            "$project": {
-                "_id": 1,
-                "name": 1,
-                "category": 1,
-                "area": 1,
-                "img_url": 1,
-                "health_score": 1,
-                "img_score": {"$meta": "vectorSearchScore"},
-                "text_score": {"$meta": "vectorSearchScore"}
-            }
-        })
-
-        results = list(recipes_collection.aggregate(pipeline))
-        
-        # Score processing and deduplication
-        seen_ids = set()
-        final_results = []
-        
-        for doc in results:
-            doc_id = str(doc["_id"])
-            if doc_id not in seen_ids:
-                seen_ids.add(doc_id)
-                doc["combined_score"] = (
-                    (image_weight * doc.get("img_score", 0)) + 
-                    (text_weight * doc.get("text_score", 0))
-                )
-                final_results.append(doc)
-
-        return sorted(
-            [r for r in final_results if r["combined_score"] >= 0.25],
-            key=lambda x: x["combined_score"],
-            reverse=True
-        )[:k]
-
-    except Exception as e:
-        logging.error(f"Search failed: {str(e)}")
-        raise
+            ])
+            results.extend(list(text_results))
+        except Exception as e:
+            print(f"Text vector search failed: {str(e)}")
+    
+    # Combine and deduplicate results
+    ranked_results = []
+    seen_ids = set()
+    
+    for doc in results:
+        doc_id = str(doc["_id"])
+        if doc_id in seen_ids:
+            # Merge scores for documents found in both searches
+            existing = next(d for d in ranked_results if str(d["_id"]) == doc_id)
+            if "img_score" in doc:
+                existing["img_score"] = doc["img_score"]
+            if "text_score" in doc:
+                existing["text_score"] = doc["text_score"]
+        else:
+            seen_ids.add(doc_id)
+            ranked_results.append(doc)
+    
+    # Calculate combined weighted score
+    for doc in ranked_results:
+        img_score = doc.get("img_score", 0)
+        text_score = doc.get("text_score", 0)
+        doc["combined_score"] = (image_weight * img_score) + (text_weight * text_score)
+    
+    # Sort by combined score
+    ranked_results.sort(key=lambda x: x["combined_score"], reverse=True)
+    
+    # Apply score validation and return top k valid results
+    valid_results = [r for r in ranked_results if is_valid_result(r, image_weight, text_weight)]
+    return valid_results[:k]
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):
@@ -193,30 +241,31 @@ def index():
 @app.route('/search', methods=['POST'])
 def search():
     try:
-        data = request.get_json()
-        if not data:
-            raise ValueError("Empty request")
+        # Ensure we have JSON data
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
             
+        data = request.get_json()
         query = data.get('query', '').strip()
         image = data.get('image')
         
         if not query and not image:
-            raise ValueError("No search criteria")
+            return jsonify({"error": "Please provide either text or image"}), 400
             
         results = hybrid_search(
             image=image,
             text=query,
             k=10,
-            image_weight=0.5 if image else 0,
-            text_weight=0.5 if query else 0
+            image_weight=0.7 if image else 0,
+            text_weight=0.3 if query else 0
         )
         
         return jsonify([{**r, '_id': str(r['_id'])} for r in results])
         
     except Exception as e:
         logging.error(f"Search error: {str(e)}")
-        return jsonify({"error": str(e)}), 400
-
+        return jsonify({"error": "Search failed", "details": str(e)}), 500
+        
 @app.route('/recipe/<recipe_id>')
 def recipe_detail(recipe_id):
     try:
